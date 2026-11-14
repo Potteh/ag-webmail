@@ -1,0 +1,84 @@
+name: agmail
+services:
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:15.0.0
+    hostname: mail.${PRIMARY_DOMAIN}
+    env_file: .env
+    environment:
+      - OVERRIDE_HOSTNAME=mail.${PRIMARY_DOMAIN}
+      - SSL_TYPE=manual
+      - SSL_CERT_PATH=/certs/live/mail.${PRIMARY_DOMAIN}/fullchain.pem
+      - SSL_KEY_PATH=/certs/live/mail.${PRIMARY_DOMAIN}/privkey.pem
+      - ENABLE_RSPAMD=1
+      - ENABLE_CLAMAV=0
+      - ENABLE_FAIL2BAN=1
+      - ENABLE_OPENDKIM=0
+      - ENABLE_OPENDMARC=0
+      - ENABLE_POLICYD_SPF=0
+      - POSTMASTER_ADDRESS=postmaster@${PRIMARY_DOMAIN}
+      - ONE_DIR=1
+      - PERMIT_DOCKER=none
+      - SPOOF_PROTECTION=1
+      - ENABLE_QUOTAS=1
+    ports:
+      - '25:25'
+      - '465:465'
+      - '587:587'
+      - '993:993'
+    volumes:
+      - mail-data:/var/mail
+      - mail-state:/var/mail-state
+      - mail-logs:/var/log/mail
+      - ./config/dms:/tmp/docker-mailserver
+      - /etc/letsencrypt:/certs:ro
+    networks:
+      default:
+        aliases:
+          - mail.${PRIMARY_DOMAIN}
+    cap_add: [NET_ADMIN]
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL','ss -ltn | grep -q :993']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+  webmail:
+    image: roundcube/roundcubemail:1.6.11-apache
+    environment:
+      ROUNDCUBEMAIL_DEFAULT_HOST: ssl://mail.${PRIMARY_DOMAIN}
+      ROUNDCUBEMAIL_DEFAULT_PORT: '993'
+      ROUNDCUBEMAIL_SMTP_SERVER: tls://mail.${PRIMARY_DOMAIN}
+      ROUNDCUBEMAIL_SMTP_PORT: '587'
+      ROUNDCUBEMAIL_DB_TYPE: sqlite
+      ROUNDCUBEMAIL_SKIN: elastic
+      ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE: 20M
+    volumes:
+      - roundcube-data:/var/roundcube/db
+      - ./web/agmail.css:/var/www/html/skins/elastic/styles/agmail.css:ro
+      - ./web/agmail-logo.svg:/var/www/html/skins/elastic/images/agmail-logo.svg:ro
+      - ./web/agmail-config.inc.php:/var/roundcube/config/agmail-config.inc.php:ro
+    depends_on:
+      mailserver:
+        condition: service_started
+    restart: unless-stopped
+  caddy:
+    image: caddy:2.9
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      WEBMAIL_HOST: ${WEBMAIL_HOST}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [webmail]
+    restart: unless-stopped
+volumes:
+  mail-data:
+  mail-state:
+  mail-logs:
+  roundcube-data:
+  caddy-data:
+  caddy-config:

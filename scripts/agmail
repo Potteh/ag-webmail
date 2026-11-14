@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+[ -f .env ] || { echo 'Missing .env: run ./scripts/install.sh'; exit 1; }
+set -a; source .env; set +a
+usage(){ echo 'Usage: agmail {domain add DOMAIN|domain list|user add ADDRESS|user delete ADDRESS|user list|user password ADDRESS|dkim|status|logs|restart}'; }
+case "${1:-}" in
+  domain)
+    case "${2:-}" in
+      add) domain="${3:?Domain required}"; [[ "$domain" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] || exit 2; echo "$domain" >> config/domains.txt; sort -u -o config/domains.txt config/domains.txt; echo "Domain registered in AGMail inventory: $domain. Create its first mailbox with user add; configure DNS per docs.";;
+      list) cat config/domains.txt;;
+      *) usage; exit 2;;
+    esac;;
+  user)
+    case "${2:-}" in
+      add) address="${3:?Email address required}"; domain="${address##*@}"; grep -Fxq "$domain" config/domains.txt || { echo 'First add the domain.'; exit 2; }; docker compose exec mailserver setup email add "$address";;
+      delete) docker compose exec mailserver setup email del "${3:?Email address required}";;
+      list) docker compose exec mailserver setup email list;;
+      password) docker compose exec mailserver setup email update "${3:?Email address required}";;
+      *) usage; exit 2;;
+    esac;;
+  dkim) docker compose exec mailserver setup config dkim;;
+  status) docker compose ps;;
+  logs) docker compose logs -f --tail=100 mailserver webmail caddy;;
+  restart) docker compose restart;;
+  *) usage; exit 2;;
+esac

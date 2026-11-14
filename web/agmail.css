@@ -1,0 +1,5 @@
+/* AGMail optional Elastic skin overrides */
+:root { --agmail-accent: #648dff; }
+#layout-sidebar { background: #131c2e; }
+#layout-sidebar .header, #layout-sidebar a { color: #edf3ff; }
+#layout-sidebar .selected { background: #263a60; }
