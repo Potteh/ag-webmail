@@ -52,7 +52,7 @@ services:
       ROUNDCUBEMAIL_DB_TYPE: sqlite
       ROUNDCUBEMAIL_SKIN: elastic
       ROUNDCUBEMAIL_PLUGINS: agmailbranding
-      ROUNDCEMAIL_UPLOAD_MAX_FILESIZE: 20M
+      ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE: 20M
     volumes:
       - roundcube-data:/var/roundcube/db
       - ./web/plugin:/var/www/html/plugins/agmailbranding:ro
