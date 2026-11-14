@@ -1,62 +1,229 @@
-# AGMail — Multi-domain Ubuntu email server
+# AGMail — Multi-domain email server and webmail for Ubuntu VPS
 
-AGMail combines docker-mailserver (Postfix/Dovecot/Rspamd), Roundcube with AGMail branding, Caddy HTTPS, and a local-only admin dashboard for domain and mailbox management.
+AGMail combines Docker Mailserver (Postfix, Dovecot and Rspamd), Roundcube webmail with AGMail branding, Caddy for web HTTPS, and a FastAPI administration dashboard. It supports mailboxes across multiple domains on **one remote Ubuntu VPS**.
 
-**Security status: development / staging release. Not production-audited.** The admin service uses the Docker socket (host-root-equivalent access). Never expose port 8787 publicly; keep it bound to 127.0.0.1 and access over SSH. Production deployments should replace this with a narrowly privileged management service.
+> **Development/staging build — not yet production-audited.** Mail delivery, Roundcube branding, certificate renewal and multi-domain DKIM have not been verified on a live VPS. The admin container currently has access to the Docker socket, which is equivalent to powerful host-level privileges. Do not expose its admin port publicly.
 
-## Ubuntu setup
+## 1. Connect to the remote VPS
 
-Install Docker Engine + Compose plugin from https://docs.docker.com/engine/install/ubuntu/ and Certbot.
+From Windows PowerShell or Terminal:
 
 ```bash
+ssh michael@YOUR_VPS_IP
+```
+
+Replace the username and VPS IP with your actual details. All commands in steps 2–9 run **on the Ubuntu VPS** after SSH login unless noted otherwise.
+
+## 2. Install prerequisites
+
+```bash
+sudo apt update
+sudo apt install -y git curl ca-certificates certbot openssl
+docker --version
+docker compose version
+```
+
+If Docker or the Compose plugin is missing, follow the [official Ubuntu Docker Engine installation guide](https://docs.docker.com/engine/install/ubuntu/). Commands below use `sudo docker compose` to work even if your SSH user is not in the Docker group. Do not add users to the Docker group casually: it provides host-level privileges.
+
+## 3. Clone the GitHub repository
+
+```bash
+cd /home/michael
+git clone https://github.com/Potteh/ag-webmail.git agmail
+cd agmail
+ls -la
+```
+
+**GitHub access:** This repository was private when these instructions were written. HTTPS cloning requires an authorized GitHub account and a fine-grained personal access token with repository Contents read access, or you can configure an SSH deploy key and clone with `git@github.com:Potteh/ag-webmail.git`. Do not put a token into a URL or commit it.
+
+If your Ubuntu username is not `michael`, replace `/home/michael` with your actual home directory or use `cd ~`.
+
+## 4. Check ports and existing VPS services
+
+```bash
+sudo ss -tulpn | grep -E ':(25|465|587|993|80|443|8787)\b' || true
+```
+
+| Port | Purpose | Exposure |
+| --- | --- | --- |
+| 25 | Incoming SMTP | Public, if hosting incoming mail |
+| 465 | SMTP over TLS | Public for mail clients |
+| 587 | SMTP submission | Public for mail clients |
+| 993 | Secure IMAP | Public for mail clients |
+| 80 | HTTP / certificate challenge | Public |
+| 443 | HTTPS webmail | Public |
+| 8787 | AGMail administration | **Remote VPS loopback only** |
+
+If Nginx, Apache, Caddy, or another container already occupies 80/443, **stop before starting AGMail**. Integrate AGMail's webmail service into your existing reverse proxy instead of running two public proxies on the same ports. Also verify VPS provider firewall/security-group rules, UFW, and whether outbound TCP 25 is blocked. Do not disrupt existing FiveM, Discord, or other services.
+
+## 5. Configure AGMail and multiple domains
+
+Choose a real domain first. The installer and certificate issuance cannot work with an undecided domain.
+
+```bash
+cd /home/michael/agmail
 cp .env.example .env
 nano .env
+```
+
+Example values (**replace every example**):
+
+```dotenv
+PRIMARY_DOMAIN=example.com
+WEBMAIL_HOST=webmail.example.com
+ACME_EMAIL=admin@example.com
+TZ=America/New_York
+AGMAIL_ADMIN_USER=admin
+AGMAIL_ADMIN_PASSWORD=REPLACE_WITH_UNIQUE_RANDOM_PASSWORD
+```
+
+Generate a secure password on the VPS with `openssl rand -hex 32`. Paste it into `.env` and then:
+
+```bash
 chmod 600 .env
-# Point mail.example.com and webmail.example.com A records to the server.
-# Before starting Caddy, acquire a bootstrap mail TLS certificate:
-sudo certbot certonly --standalone -d mail.example.com
 mkdir -p config/dms
 cp config/domains.txt.example config/domains.txt
-# Replace sample domains with your actual domains:
 nano config/domains.txt
-docker compose config --quiet
-docker compose up -d --build
 ```
 
-Set a **unique random** AGMAIL_ADMIN_PASSWORD of at least 20 characters. Never commit .env, certificates, mailbox data, or private keys. To avoid an accidental default credential, deployment refuses to start if the admin variables are missing; do not use the placeholder password.
+Put **real hosted domains**, one per line, in `config/domains.txt`, for example:
 
-### Webmail
+```text
+example.com
+example.org
+another.net
+```
 
-Browse https://webmail.example.com. Users sign in with their full email address. The AGMail branding plugin is enabled through Roundcube's plugins environment setting; verify it loads in your image version.
+The domain inventory is used by AGMail administration. Adding a domain does **not** automatically publish DNS records, create mailboxes, or create catch-all accounts.
 
-### Admin dashboard (SSH tunnel)
+Never commit `.env`, private keys, certificate files or mailbox data.
 
-On your local workstation:
+## 6. DNS for every domain
+
+In your DNS provider, replace the examples with your actual domain and VPS public IP.
+
+| Record | Name | Example value |
+| --- | --- | --- |
+| A | `mail.example.com` | Your VPS public IPv4 address |
+| A | `webmail.example.com` | Your VPS public IPv4 address |
+| MX | `example.com` | `10 mail.example.com.` |
+| TXT (SPF) | `example.com` | `v=spf1 mx -all` (adjust for all actual sending hosts) |
+| TXT (DMARC) | `_dmarc.example.com` | `v=DMARC1; p=none` initially |
+| TXT (DKIM) | selector under `_domainkey.example.com` | Actual public key generated by the mail server |
+
+For each additional hosted domain, point its MX at the same primary mail hostname and publish SPF, DKIM and DMARC records appropriate for that domain. Your VPS provider must set the sending IP's **PTR/reverse DNS** to the primary mail hostname; make sure its forward A record matches. Do not publish AAAA records unless IPv6 delivery is properly configured.
+
+**DKIM:** Generate signing keys with the Docker Mailserver/Rspamd setup command appropriate to the pinned image version and inspect the generated TXT records before publishing. Verify signatures and domain alignment with external delivery tests; the current build does not automate this.
+
+## 7. Obtain the mail TLS certificate
+
+Wait for `mail.example.com` to resolve to your VPS. If port 80 is free and no other web proxy is serving it:
+
 ```bash
-ssh -L 8787:127.0.0.1:8787 YOUR_USER@YOUR_SERVER
+sudo certbot certonly --standalone -d mail.example.com
 ```
-Open http://127.0.0.1:8787 and enter the admin credentials from .env. The admin UI supports adding domains, listing mailboxes, creating mailboxes and changing passwords. It does not currently delete accounts or manage quotas. It is HTTP Basic authentication over loopback/SSH, not a public SSO login.
 
-### Multi-domain DNS
+The current Compose configuration expects the mail certificate and private key at `/etc/letsencrypt/live/mail.example.com/`, mounted read-only into the mail container. Caddy separately handles the HTTPS certificate for `webmail.example.com`.
 
-Each domain needs an MX record pointing to the primary mail host, SPF, DKIM and DMARC. The primary host needs A and PTR records. Generate DKIM keys and publish their TXT records. Test SPF/DKIM/DMARC alignment, sending and receiving, TLS, and anti-relay controls before going live.
+**Important:** Unattended renewal of the mail certificate is not yet configured. Do not assume the mail certificate will renew automatically while Caddy occupies port 80. Plan a DNS-01 or coordinated challenge workflow with a mailserver reload/restart hook before production.
 
-### Operations
+## 8. Start the containers
 
 ```bash
-docker compose ps
-docker compose logs -f --tail=100
-bash scripts/agmail domain add second-domain.example
-bash scripts/agmail user add person@second-domain.example
+cd /home/michael/agmail
+sudo docker compose config --quiet
+sudo docker compose up -d --build
+sudo docker compose ps
+sudo docker compose logs --tail=100
 ```
 
-### Outstanding production work
+If any service fails, inspect logs before proceeding. A successful `docker compose up` is **not** proof that SMTP, IMAP, TLS, DKIM or mail delivery work.
 
-- Automated mail certificate renewal and mailserver reload; Caddy only renews its own web certificate.
-- DKIM signing and alignment verification for each hosted domain.
-- Backups and tested restore procedures, monitoring, and security review.
-- Docker socket privilege separation for the admin backend.
-- Mail delivery testing on a real VPS (outbound port 25 may be blocked).
-- SMTP/IMAP client compatibility testing and Roundcube plugin/theme testing.
+## 9. Create and manage mailboxes
 
-**No claim is made that these services have been started or end-to-end tested on your VPS.**
+On the VPS:
+
+```bash
+sudo docker compose exec mailserver setup email add admin@example.com
+sudo docker compose exec mailserver setup email add support@example.org
+sudo docker compose exec mailserver setup email list
+```
+
+The first two commands prompt for mailbox passwords. Each account uses its full email address as its webmail username. The local AGMail admin UI also supports domain registration, mailbox creation, listing and password changes.
+
+For CLI management:
+
+```bash
+bash scripts/agmail domain add another.net
+bash scripts/agmail domain list
+bash scripts/agmail status
+```
+
+The CLI script calls `docker compose` without `sudo`; if your SSH user lacks Docker access, use the equivalent `sudo docker compose exec mailserver setup ...` commands.
+
+## 10. Open webmail on the internet
+
+Once DNS, Caddy and certificates are working, visit:
+
+**`https://webmail.example.com`**
+
+This is a **public website hosted by your VPS**, not localhost. Replace the example hostname with your configured `WEBMAIL_HOST`. Log in with the mailbox's full email address and password.
+
+## 11. Access the admin dashboard securely from your computer
+
+AGMail's Compose configuration publishes the admin service as:
+
+```yaml
+ports:
+  - "127.0.0.1:8787:8787"
+```
+
+Here `127.0.0.1` means **the VPS's own loopback interface**, not that AGMail is installed on your Windows PC. The admin service is intentionally **not reachable at `http://YOUR_VPS_IP:8787`**.
+
+From **Windows PowerShell on your computer** (not from inside the SSH session on the VPS), run:
+
+```bash
+ssh -L 8787:127.0.0.1:8787 michael@YOUR_VPS_IP
+```
+
+Leave the SSH connection open. Then, **in your computer's browser**, visit:
+
+**`http://127.0.0.1:8787`**
+
+The SSH tunnel securely forwards that local address to the admin service on your **remote VPS**. Authenticate using `AGMAIL_ADMIN_USER` and `AGMAIL_ADMIN_PASSWORD` from the VPS's `.env` file.
+
+Do **not** change the Docker port binding to `0.0.0.0:8787` or open port 8787 in UFW. This development admin service uses HTTP Basic authentication and has Docker socket privileges. A future internet-accessible admin panel should use HTTPS, stronger authentication, and a least-privilege backend.
+
+## 12. Update AGMail from GitHub
+
+Run on the VPS:
+
+```bash
+cd /home/michael/agmail
+git pull --ff-only origin main
+sudo docker compose config --quiet
+sudo docker compose up -d --build
+sudo docker compose ps
+```
+
+Back up persistent volumes and configuration before major upgrades. Pulling updates should not delete Docker named volumes, but never assume upgrades are risk-free.
+
+## 13. Troubleshooting and pre-production checklist
+
+```bash
+sudo docker compose ps
+sudo docker compose logs -f --tail=100 mailserver webmail caddy admin
+sudo ss -tulpn | grep -E ':(25|465|587|993|80|443|8787)\b' || true
+```
+
+Before using AGMail for important email:
+
+- Verify external inbound SMTP, authenticated outbound submission, IMAP login and attachment handling.
+- Check that your VPS provider allows outbound TCP 25 or configure a reputable SMTP relay.
+- Verify DKIM signatures and SPF/DMARC alignment for **every** domain.
+- Implement and test automated mail TLS renewal and a reload hook.
+- Test backups and restores of mail, Roundcube data, Docker Mailserver configuration and secrets.
+- Review Docker socket privileges, admin authentication, firewall rules and container updates.
+- Test the Roundcube AGMail branding plugin against the pinned image.
+
+The current project is a **functional codebase in development**, not a verified, production-ready mail hosting service. No deployment or live email delivery has been performed on your VPS by this repository update.
