@@ -1,0 +1,4 @@
+.env
+config/domains.txt
+*.pem
+*.key
