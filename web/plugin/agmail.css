@@ -1,0 +1,7 @@
+/* AGMail: custom dark webmail styling layered over Roundcube Elastic */
+:root { --agmail-accent: #7398ff; }
+body, #layout, #layout-content { background-color: #0d1628; }
+#layout-sidebar, .menu.toolbar, #layout-menu { background-color: #15233a; }
+#layout-sidebar .header, #layout-sidebar a { color: #e6efff; }
+#layout-sidebar .selected, .listing tbody tr.selected { background-color: #263d63; }
+.btn-primary, .button.primary { background-color: #7398ff; border-color: #7398ff; color: #101a2d; }

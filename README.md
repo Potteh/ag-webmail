@@ -1,60 +1,62 @@
-# AGMail — Multi-domain self-hosted mail for Ubuntu
+# AGMail — Multi-domain Ubuntu email server
 
-AGMail is a Docker Compose distribution of docker-mailserver (Postfix, Dovecot, Rspamd) with Roundcube webmail and Caddy HTTPS. A single instance can host mailboxes on multiple domains.
+AGMail combines docker-mailserver (Postfix/Dovecot/Rspamd), Roundcube with AGMail branding, Caddy HTTPS, and a local-only admin dashboard for domain and mailbox management.
 
-**Status: starter deployment, not production-audited.** The Roundcube Elastic interface is used; AGMail logo and optional CSS are supplied but not automatically applied. Domain/user administration is command-line based.
+**Security status: development / staging release. Not production-audited.** The admin service uses the Docker socket (host-root-equivalent access). Never expose port 8787 publicly; keep it bound to 127.0.0.1 and access over SSH. Production deployments should replace this with a narrowly privileged management service.
 
-## Requirements
+## Ubuntu setup
 
-Ubuntu 22.04/24.04, Docker Engine and Compose v2, public static IP, DNS control, inbound/outbound TCP 25, correct reverse DNS/PTR, and ideally 4 GB RAM. Allow TCP 25, 465, 587, 993, 80 and 443.
-
-## Install
+Install Docker Engine + Compose plugin from https://docs.docker.com/engine/install/ubuntu/ and Certbot.
 
 ```bash
-sudo apt update && sudo apt install -y ca-certificates curl certbot
-# Install Docker Engine and Compose plugin: https://docs.docker.com/engine/install/ubuntu/
 cp .env.example .env
 nano .env
 chmod 600 .env
-# Set A records first, then obtain a bootstrap mail certificate:
-sudo certbot certonly --standalone -d mail.YOUR_PRIMARY_DOMAIN
-bash scripts/install.sh
+# Point mail.example.com and webmail.example.com A records to the server.
+# Before starting Caddy, acquire a bootstrap mail TLS certificate:
+sudo certbot certonly --standalone -d mail.example.com
+mkdir -p config/dms
+cp config/domains.txt.example config/domains.txt
+# Replace sample domains with your actual domains:
+nano config/domains.txt
+docker compose config --quiet
+docker compose up -d --build
 ```
 
-Visit https://webmail.YOUR_PRIMARY_DOMAIN once Caddy has issued its HTTPS certificate.
+Set a **unique random** AGMAIL_ADMIN_PASSWORD of at least 20 characters. Never commit .env, certificates, mailbox data, or private keys. To avoid an accidental default credential, deployment refuses to start if the admin variables are missing; do not use the placeholder password.
 
-## Multiple domains
+### Webmail
+
+Browse https://webmail.example.com. Users sign in with their full email address. The AGMail branding plugin is enabled through Roundcube's plugins environment setting; verify it loads in your image version.
+
+### Admin dashboard (SSH tunnel)
+
+On your local workstation:
+```bash
+ssh -L 8787:127.0.0.1:8787 YOUR_USER@YOUR_SERVER
+```
+Open http://127.0.0.1:8787 and enter the admin credentials from .env. The admin UI supports adding domains, listing mailboxes, creating mailboxes and changing passwords. It does not currently delete accounts or manage quotas. It is HTTP Basic authentication over loopback/SSH, not a public SSO login.
+
+### Multi-domain DNS
+
+Each domain needs an MX record pointing to the primary mail host, SPF, DKIM and DMARC. The primary host needs A and PTR records. Generate DKIM keys and publish their TXT records. Test SPF/DKIM/DMARC alignment, sending and receiving, TLS, and anti-relay controls before going live.
+
+### Operations
 
 ```bash
-bash scripts/agmail domain add example.org
-bash scripts/agmail domain add another.net
-bash scripts/agmail domain list
-bash scripts/agmail user add alice@example.org
-bash scripts/agmail user add bob@another.net
-bash scripts/agmail user list
-bash scripts/agmail user password alice@example.org
-bash scripts/agmail dkim
-bash scripts/agmail status
-bash scripts/agmail logs
+docker compose ps
+docker compose logs -f --tail=100
+bash scripts/agmail domain add second-domain.example
+bash scripts/agmail user add person@second-domain.example
 ```
 
-Adding a domain registers it in AGMail's inventory; it does not create a mailbox or catch-all. Users sign in with their full email address. Secondary domains share the primary mail host.
+### Outstanding production work
 
-## DNS for every domain
+- Automated mail certificate renewal and mailserver reload; Caddy only renews its own web certificate.
+- DKIM signing and alignment verification for each hosted domain.
+- Backups and tested restore procedures, monitoring, and security review.
+- Docker socket privilege separation for the admin backend.
+- Mail delivery testing on a real VPS (outbound port 25 may be blocked).
+- SMTP/IMAP client compatibility testing and Roundcube plugin/theme testing.
 
-- MX: `10 mail.YOUR_PRIMARY_DOMAIN.`
-- SPF TXT: `v=spf1 mx -all` (adjust for relays and actual sending hosts)
-- DMARC TXT at `_dmarc.DOMAIN`: `v=DMARC1; p=none` initially
-- DKIM TXT: publish generated signing key at the configured selector under `_domainkey.DOMAIN`
-- A: `mail.YOUR_PRIMARY_DOMAIN` and `webmail.YOUR_PRIMARY_DOMAIN` to your server
-- PTR: sending IP reverse DNS to `mail.YOUR_PRIMARY_DOMAIN`
-
-Verify DKIM behavior with docker-mailserver v15/Rspamd before production. Confirm SPF, DKIM and DMARC alignment on externally delivered messages.
-
-## TLS renewal caveat
-
-The standalone Certbot bootstrap command needs port 80 free; Caddy subsequently owns port 80. **Unattended mail TLS renewal is not configured.** Implement DNS-01 or a coordinated challenge flow and a mailserver restart/reload hook before production use. Caddy independently manages web HTTPS certificates.
-
-## Backups and security
-
-Back up `mail-data`, `mail-state`, `roundcube-data`, `config/dms`, and the private `.env`. Test restores, external inbound/outbound delivery, authentication, TLS, and rejection of unauthenticated relaying. Keep Docker images updated. ClamAV is disabled by default. This starter does not include a GUI admin panel, automated backups, verified DKIM automation, or outbound SMTP relay fallback.
+**No claim is made that these services have been started or end-to-end tested on your VPS.**

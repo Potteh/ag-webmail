@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AGMail • Administration</title><style>
+:root{color-scheme:dark;font-family:Inter,system-ui,Arial,sans-serif;background:#0b1120;color:#e9efff}
+*{box-sizing:border-box}body{margin:0}header{padding:22px 5%;background:#121d32;border-bottom:1px solid #2b3954;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:25px;font-weight:800;letter-spacing:-1px}.logo span{color:#8daeff}main{max-width:1080px;margin:34px auto;padding:0 20px}
+h1{font-size:28px;margin:0 0 8px}p{color:#aab8d3}section{background:#131f35;border:1px solid #2c3c5b;border-radius:15px;padding:24px;margin-top:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}@media(max-width:760px){.grid{grid-template-columns:1fr}}
+input{background:#0c1628;color:#fff;border:1px solid #405173;border-radius:8px;padding:12px;width:100%;margin:6px 0 12px}
+button{background:#648dff;color:#081327;font-weight:700;border:0;border-radius:8px;padding:12px 18px;cursor:pointer}
+button:hover{background:#92adff}button:disabled{opacity:.5}ul{padding-left:20px;line-height:2}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0c1628;border-radius:9px;padding:15px;max-height:300px;overflow:auto}
+small{color:#aab8d3}#notice{min-height:20px;color:#b9d2ff}label{display:block;font-size:13px;color:#b5c5e2}
+</style></head><body>
+<header><div class="logo">✉ AG<span>Mail</span></div><small>Administration · SSH tunnel only</small></header>
+<main><h1>Mail server overview</h1><p>Manage domains and mailboxes on your own infrastructure.</p><p id="notice" role="status"></p>
+<section><strong>Mail server:</strong> <span id="status">Checking…</span> <button style="float:right" onclick="refresh()">Refresh</button></section>
+<div class="grid"><section><h2>Domains</h2><ul id="domains"></ul><form id="domainForm"><label for="domain">Add domain</label><input id="domain" required placeholder="example.org"><button>Add domain</button></form></section>
+<section><h2>Mailboxes</h2><pre id="mailboxes">Loading…</pre><form id="mailForm"><label for="address">Email address</label><input id="address" type="email" required placeholder="hello@example.org"><label for="password">Mailbox password (12+ characters)</label><input id="password" type="password" required minlength="12" autocomplete="new-password"><button>Create mailbox</button></form></section></div>
+<section><h2>Change mailbox password</h2><form id="passwordForm"><label for="resetAddress">Mailbox address</label><input id="resetAddress" type="email" required><label for="newPassword">New password</label><input id="newPassword" type="password" required minlength="12" autocomplete="new-password"><button>Update password</button></form></section>
+<section><h2>Deployment checklist</h2><p>For each domain, publish MX, SPF, DKIM and DMARC. Verify PTR, TLS renewal, backups and outbound delivery before production.</p></section>
+</main><script>
+const el=id=>document.getElementById(id);
+async function api(path,options={}){const response=await fetch(path,{cache:'no-store',headers:{'Content-Type':'application/json'},...options});const data=await response.json();if(!response.ok)throw Error(typeof data.detail==='string'?data.detail:'Request failed');return data}
+function notice(message){el('notice').textContent=message}
+async function refresh(){try{const [status,domains,mailboxes]=await Promise.all([api('/api/status'),api('/api/domains'),api('/api/mailboxes')]);el('status').textContent=status.status;el('domains').replaceChildren(...domains.domains.map(d=>{const li=document.createElement('li');li.textContent=d;return li}));el('mailboxes').textContent=mailboxes.output||'No mailboxes yet';}catch(e){notice(e.message)}}
+function bind(id,path,method,fields){el(id).addEventListener('submit',async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;try{const payload=Object.fromEntries(fields.map(([key,input])=>[key,el(input).value]));await api(path,{method,body:JSON.stringify(payload)});e.target.reset();notice('Saved successfully');await refresh()}catch(err){notice(err.message)}finally{button.disabled=false}})}
+bind('domainForm','/api/domains','POST',[['domain','domain']]);
+bind('mailForm','/api/mailboxes','POST',[['address','address'],['password','password']]);
+bind('passwordForm','/api/mailboxes/password','PUT',[['address','resetAddress'],['password','newPassword']]);
+refresh();
+</script></body></html>

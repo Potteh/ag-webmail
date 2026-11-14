@@ -51,12 +51,11 @@ services:
       ROUNDCUBEMAIL_SMTP_PORT: '587'
       ROUNDCUBEMAIL_DB_TYPE: sqlite
       ROUNDCUBEMAIL_SKIN: elastic
-      ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE: 20M
+      ROUNDCUBEMAIL_PLUGINS: agmailbranding
+      ROUNDCEMAIL_UPLOAD_MAX_FILESIZE: 20M
     volumes:
       - roundcube-data:/var/roundcube/db
-      - ./web/agmail.css:/var/www/html/skins/elastic/styles/agmail.css:ro
-      - ./web/agmail-logo.svg:/var/www/html/skins/elastic/images/agmail-logo.svg:ro
-      - ./web/agmail-config.inc.php:/var/roundcube/config/agmail-config.inc.php:ro
+      - ./web/plugin:/var/www/html/plugins/agmailbranding:ro
     depends_on:
       mailserver:
         condition: service_started
@@ -74,6 +73,17 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     depends_on: [webmail]
+    restart: unless-stopped
+  admin:
+    build: ./admin
+    environment:
+      AGMAIL_ADMIN_USER: ${AGMAIL_ADMIN_USER:?Set AGMAIL_ADMIN_USER in .env}
+      AGMAIL_ADMIN_PASSWORD: ${AGMAIL_ADMIN_PASSWORD:?Set AGMAIL_ADMIN_PASSWORD in .env}
+    ports:
+      - '127.0.0.1:8787:8787'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config:/data
     restart: unless-stopped
 volumes:
   mail-data:
