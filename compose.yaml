@@ -43,6 +43,8 @@ services:
       timeout: 10s
       retries: 10
   webmail:
+    ports:
+      - '127.0.0.1:8088:80'
     image: roundcube/roundcubemail:1.6.11-apache
     environment:
       ROUNDCUBEMAIL_DEFAULT_HOST: ssl://mail.${PRIMARY_DOMAIN}
@@ -61,6 +63,7 @@ services:
         condition: service_started
     restart: unless-stopped
   caddy:
+    profiles: ['caddy']
     image: caddy:2.9
     ports:
       - '80:80'
