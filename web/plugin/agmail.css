@@ -209,3 +209,82 @@ body.task-mail button:focus-visible {
   body.task-mail #layout-list,
   body.task-mail #layout-content { border-right: 0; }
 }
+
+/* Roundcube Elastic dark-mode compatibility.
+   The theme switch adds dark-mode to the document; restore contrast across
+   all three panes without changing toolbar geometry or mail behavior. */
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail,
+body.task-mail.dark-mode {
+  --agmail-border: #33465f;
+  --agmail-surface: #19283d;
+  --agmail-muted: #172438;
+  color: #e7edf7;
+  background: #101c2c;
+}
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-sidebar,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-sidebar .header,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-sidebar .scroller,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-sidebar .folderlist,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-sidebar .listing,
+body.task-mail.dark-mode #layout-sidebar,
+body.task-mail.dark-mode #layout-sidebar .header,
+body.task-mail.dark-mode #layout-sidebar .scroller,
+body.task-mail.dark-mode #layout-sidebar .folderlist {
+  background: #172438;
+  color: #e7edf7;
+  border-color: #33465f;
+}
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-list,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-content,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-list .header,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-content .header,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail .toolbar,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-content .messageheader,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-content .headers-table,
+body.task-mail.dark-mode #layout-list,
+body.task-mail.dark-mode #layout-content,
+body.task-mail.dark-mode #layout-list .header,
+body.task-mail.dark-mode #layout-content .header,
+body.task-mail.dark-mode .toolbar {
+  background: #19283d;
+  color: #e7edf7;
+  border-color: #33465f;
+}
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-sidebar a,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-sidebar .folderlist li a,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #messagelist,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #messagelist a,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail .toolbar .button,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail .toolbar a,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-content .header,
+body.task-mail.dark-mode #layout-sidebar a,
+body.task-mail.dark-mode #messagelist,
+body.task-mail.dark-mode #messagelist a,
+body.task-mail.dark-mode .toolbar .button {
+  color: #dfe9f8;
+}
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #messagelist tr:hover,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #messagelist li:hover,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail .toolbar a.button:hover,
+body.task-mail.dark-mode #messagelist tr:hover,
+body.task-mail.dark-mode #messagelist li:hover {
+  background: #263b56;
+}
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #messagelist tr.selected,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #messagelist li.selected,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-sidebar .folderlist li.selected,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #layout-sidebar .folderlist li.selected > a,
+body.task-mail.dark-mode #messagelist tr.selected,
+body.task-mail.dark-mode #messagelist li.selected,
+body.task-mail.dark-mode #layout-sidebar .folderlist li.selected {
+  background: #24466e;
+  color: #fff;
+}
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail .searchbar input,
+:is(html.dark-mode, html[data-theme="dark"]) body.task-mail #quicksearchbox,
+body.task-mail.dark-mode .searchbar input,
+body.task-mail.dark-mode #quicksearchbox {
+  background: #22344d;
+  border-color: #415570;
+  color: #f5f8ff;
+}
