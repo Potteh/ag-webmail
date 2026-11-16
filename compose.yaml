@@ -10,6 +10,8 @@ services:
       - SSL_CERT_PATH=/certs/live/mail.${PRIMARY_DOMAIN}/fullchain.pem
       - SSL_KEY_PATH=/certs/live/mail.${PRIMARY_DOMAIN}/privkey.pem
       - ENABLE_RSPAMD=1
+      - ENABLE_AMAVIS=0
+      - ENABLE_SPAMASSASSIN=0
       - ENABLE_CLAMAV=0
       - ENABLE_FAIL2BAN=1
       - ENABLE_OPENDKIM=0
