@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+case "${1:-}" in
+ domain)
+   case "${2:-}" in
+     add) domain="${3:?domain required}"; [[ "$domain" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] || exit 2; mkdir -p config; touch config/domains.txt; grep -Fxq "$domain" config/domains.txt || echo "$domain" >> config/domains.txt;;
+     list) cat config/domains.txt;;
+     *) echo 'Usage: agmail domain add DOMAIN | domain list'; exit 2;;
+   esac;;
+ user)
+   case "${2:-}" in
+     add) sudo docker compose exec mailserver setup email add "${3:?email required}";;
+     list) sudo docker compose exec mailserver setup email list;;
+     *) echo 'Usage: agmail user add ADDRESS | user list'; exit 2;;
+   esac;;
+ status) sudo docker compose ps;;
+ logs) sudo docker compose logs --tail=100;;
+ *) echo 'Usage: agmail {domain add DOMAIN|domain list|user add ADDRESS|user list|status|logs}'; exit 2;;
+esac
