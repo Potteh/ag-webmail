@@ -112,3 +112,100 @@ body.task-login #login-footer a { color: #b4c1db; }
 @media (prefers-reduced-motion: reduce) {
   body.task-login * { transition: none !important; }
 }
+
+/* Outlook-inspired workspace for authenticated mail only.
+   Preserve Elastic's native three-pane sizing and responsive controls. */
+body.task-mail {
+  --agmail-blue: #1765c1;
+  --agmail-border: #e1e7f0;
+  --agmail-surface: #ffffff;
+  --agmail-muted: #f5f8fc;
+  color: #26354a;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+body.task-mail #layout-menu {
+  background: #0f5cad;
+  border-right: 1px solid #0c4f99;
+}
+body.task-mail #layout-menu .popover-header,
+body.task-mail #layout-menu .menu { background: #0f5cad; }
+body.task-mail #layout-menu a:hover,
+body.task-mail #layout-menu .button:hover,
+body.task-mail #layout-menu .menu a:hover,
+body.task-mail #layout-menu a.selected,
+body.task-mail #layout-menu .button.selected {
+  background: rgba(255,255,255,.17);
+  color: #fff;
+}
+body.task-mail #layout-sidebar {
+  background: #f5f8fc;
+  border-right: 1px solid var(--agmail-border);
+}
+body.task-mail #layout-sidebar .header,
+body.task-mail #layout-sidebar .scroller,
+body.task-mail #layout-sidebar .folderlist,
+body.task-mail #layout-sidebar .listing { background-color: #f5f8fc; }
+body.task-mail #layout-sidebar a,
+body.task-mail #layout-sidebar .folderlist li a { color: #34435b; }
+body.task-mail #layout-sidebar .folderlist li.selected > a,
+body.task-mail #layout-sidebar .folderlist li a:hover,
+body.task-mail #layout-sidebar .folderlist li.selected {
+  background: #dceafa;
+  color: #145ca9;
+  border-radius: 6px;
+}
+body.task-mail #layout-list,
+body.task-mail #layout-content { background: #fff; }
+body.task-mail #layout-list { border-right: 1px solid var(--agmail-border); }
+body.task-mail #layout-list .header,
+body.task-mail #layout-content .header {
+  background: #fff;
+  border-bottom: 1px solid var(--agmail-border);
+}
+body.task-mail .toolbar { background-color: #fff; }
+body.task-mail .toolbar a.button:hover,
+body.task-mail .toolbar button:hover {
+  background-color: #edf4fd;
+  border-radius: 7px;
+}
+body.task-mail #messagelist tr,
+body.task-mail #messagelist li {
+  border-bottom-color: #edf1f6;
+}
+body.task-mail #messagelist tr:hover,
+body.task-mail #messagelist li:hover { background-color: #f3f8ff; }
+body.task-mail #messagelist tr.selected,
+body.task-mail #messagelist li.selected {
+  background-color: #e4f0ff;
+}
+body.task-mail #messagelist tr.unread,
+body.task-mail #messagelist li.unread { font-weight: 650; }
+body.task-mail .searchbar input,
+body.task-mail input.search,
+body.task-mail #quicksearchbox {
+  border-radius: 9px;
+  background-color: #f3f7fc;
+  border-color: #dce5f1;
+}
+body.task-mail .btn-primary,
+body.task-mail .button.primary,
+body.task-mail a.compose {
+  background-color: var(--agmail-blue);
+  border-color: var(--agmail-blue);
+  color: #fff;
+}
+body.task-mail .btn-primary:hover,
+body.task-mail .button.primary:hover { background-color: #0e519f; }
+body.task-mail #layout-content .messageheader,
+body.task-mail #layout-content .headers-table { background: #fff; }
+body.task-mail .listing tbody tr:focus-visible,
+body.task-mail a:focus-visible,
+body.task-mail button:focus-visible {
+  outline: 2px solid #1765c1;
+  outline-offset: -2px;
+}
+@media (max-width: 767px) {
+  body.task-mail #layout-sidebar { background: #f5f8fc; }
+  body.task-mail #layout-list,
+  body.task-mail #layout-content { border-right: 0; }
+}
