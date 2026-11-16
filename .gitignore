@@ -1,0 +1,6 @@
+.env
+config/domains.txt
+config/dms/*
+!config/dms/.gitkeep
+*.pem
+*.key
