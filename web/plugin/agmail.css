@@ -44,3 +44,71 @@
 #layout-menu .logo {
   max-width: 100%;
 }
+
+/* Login-only redesign: leave the mail interface and Elastic layout untouched. */
+body.task-login {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 15% 12%, rgba(74,107,236,.30), transparent 40%),
+              radial-gradient(ellipse at 85% 85%, rgba(122,64,202,.26), transparent 42%),
+              linear-gradient(145deg, #0a1225 0%, #111e39 55%, #0b1227 100%);
+  background-attachment: fixed;
+  color: #eaf0ff;
+}
+body.task-login #layout,
+body.task-login #layout-content,
+body.task-login #layout-content > .content {
+  background: transparent;
+}
+body.task-login #login-form {
+  background: rgba(18, 30, 55, .88);
+  border: 1px solid rgba(190, 207, 255, .17);
+  border-radius: 22px;
+  padding: clamp(24px, 5vw, 44px);
+  box-shadow: 0 24px 70px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #eaf0ff;
+}
+body.task-login #login-form label,
+body.task-login #login-form .form-control-label,
+body.task-login #login-form h1,
+body.task-login #login-form h2 {
+  color: #edf3ff;
+}
+body.task-login #login-form input[type="text"],
+body.task-login #login-form input[type="email"],
+body.task-login #login-form input[type="password"] {
+  background: rgba(7, 15, 33, .68);
+  border: 1px solid rgba(176, 195, 244, .28);
+  border-radius: 11px;
+  color: #fff;
+  min-height: 46px;
+}
+body.task-login #login-form input:focus {
+  border-color: #86a8ff;
+  box-shadow: 0 0 0 3px rgba(100, 143, 255, .22);
+}
+body.task-login #login-form input::placeholder { color: #a7b6d4; }
+body.task-login #login-form .btn-primary,
+body.task-login #login-form button[type="submit"] {
+  background: linear-gradient(105deg, #4776dc, #7959d9);
+  border: 0;
+  border-radius: 11px;
+  min-height: 46px;
+  font-weight: 650;
+  box-shadow: 0 8px 24px rgba(56, 86, 198, .30);
+}
+body.task-login #login-form .btn-primary:hover,
+body.task-login #login-form button[type="submit"]:hover {
+  background: linear-gradient(105deg, #5685ed, #8a6bec);
+}
+body.task-login #login-logo { margin-bottom: 22px; }
+body.task-login #login-logo img { max-width: min(100%, 240px); height: auto; }
+body.task-login #login-footer,
+body.task-login #login-footer a { color: #b4c1db; }
+@media (max-width: 575px) {
+  body.task-login #login-form { border-radius: 17px; margin: 12px; padding: 24px 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.task-login * { transition: none !important; }
+}
