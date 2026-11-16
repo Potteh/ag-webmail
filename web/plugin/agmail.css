@@ -1,7 +1,46 @@
-/* AGMail: custom dark webmail styling layered over Roundcube Elastic */
-:root { --agmail-accent: #7398ff; }
-body, #layout, #layout-content { background-color: #0d1628; }
-#layout-sidebar, .menu.toolbar, #layout-menu { background-color: #15233a; }
-#layout-sidebar .header, #layout-sidebar a { color: #e6efff; }
-#layout-sidebar .selected, .listing tbody tr.selected { background-color: #263d63; }
-.btn-primary, .button.primary { background-color: #7398ff; border-color: #7398ff; color: #101a2d; }
+/* AGMail branding for Roundcube Elastic.
+   Keep Elastic's own layout, sizing, toolbar and responsive rules intact. */
+:root {
+  --agmail-accent: #4776dc;
+  --agmail-navy: #17253e;
+  --agmail-navy-hover: #243a5b;
+}
+
+/* Sidebar navigation is the only panel receiving a dark background.
+   Do not recolor #layout or #layout-content: Elastic's message panes,
+   toolbar icons and empty-state graphics expect their original surfaces. */
+#layout-menu {
+  background: var(--agmail-navy);
+}
+#layout-menu .popover-header,
+#layout-menu .menu {
+  background: var(--agmail-navy);
+}
+#layout-menu a,
+#layout-menu .button,
+#layout-menu .menu a {
+  color: #edf3ff;
+}
+#layout-menu a:hover,
+#layout-menu .button:hover,
+#layout-menu .menu a:hover,
+#layout-menu a.selected,
+#layout-menu .button.selected {
+  background-color: var(--agmail-navy-hover);
+  color: #fff;
+}
+
+/* Subtle brand accent without replacing Elastic button geometry. */
+.btn-primary,
+.button.primary {
+  background-color: var(--agmail-accent);
+  border-color: var(--agmail-accent);
+  color: #fff;
+}
+
+/* Ensure the branding image fits its available header space. */
+#layout-menu .logo img,
+#layout-menu .logo svg,
+#layout-menu .logo {
+  max-width: 100%;
+}
