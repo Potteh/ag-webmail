@@ -54,7 +54,7 @@ sudo ss -tulpn | grep -E ':(25|465|587|993|80|443|8787)\b' || true
 | 443 | HTTPS webmail | Public |
 | 8787 | AGMail administration | **Remote VPS loopback only** |
 
-If Nginx, Apache, Caddy, or another container already occupies 80/443, **stop before starting AGMail**. Integrate AGMail's webmail service into your existing reverse proxy instead of running two public proxies on the same ports. Also verify VPS provider firewall/security-group rules, UFW, and whether outbound TCP 25 is blocked. Do not disrupt existing FiveM, Discord, or other services.
+**Existing Nginx installation:** The default Compose stack now keeps Caddy disabled via an optional Compose profile. Roundcube is published only to VPS loopback at `127.0.0.1:8088`. Add an Nginx virtual host proxying to `http://127.0.0.1:8088` and obtain HTTPS with your existing Nginx/Certbot configuration. Do not use `--profile caddy` while Nginx occupies ports 80/443. Also verify VPS provider firewall/security-group rules, UFW, and whether outbound TCP 25 is blocked. Do not disrupt existing FiveM, Discord, or other services.
 
 ## 5. Configure AGMail and multiple domains
 
@@ -123,7 +123,7 @@ Wait for `mail.example.com` to resolve to your VPS. If port 80 is free and no ot
 sudo certbot certonly --standalone -d mail.example.com
 ```
 
-The current Compose configuration expects the mail certificate and private key at `/etc/letsencrypt/live/mail.example.com/`, mounted read-only into the mail container. Caddy separately handles the HTTPS certificate for `webmail.example.com`.
+The current Compose configuration expects the mail certificate and private key at `/etc/letsencrypt/live/mail.example.com/`, mounted read-only into the mail container. When using existing Nginx, Nginx handles the HTTPS certificate for `webmail.example.com`. Caddy is opt-in only via `docker compose --profile caddy up -d` and must not be enabled if Nginx uses 80/443.
 
 **Important:** Unattended renewal of the mail certificate is not yet configured. Do not assume the mail certificate will renew automatically while Caddy occupies port 80. Plan a DNS-01 or coordinated challenge workflow with a mailserver reload/restart hook before production.
 
@@ -163,7 +163,7 @@ The CLI script calls `docker compose` without `sudo`; if your SSH user lacks Doc
 
 ## 10. Open webmail on the internet
 
-Once DNS, Caddy and certificates are working, visit:
+Once DNS, Nginx reverse proxy and certificates are working, visit:
 
 **`https://webmail.example.com`**
 
@@ -227,3 +227,8 @@ Before using AGMail for important email:
 - Test the Roundcube AGMail branding plugin against the pinned image.
 
 The current project is a **functional codebase in development**, not a verified, production-ready mail hosting service. No deployment or live email delivery has been performed on your VPS by this repository update.
+
+## Existing Nginx reverse proxy (recommended on shared VPS)
+
+The default Compose setup exposes Roundcube on **VPS loopback port 8088** and does not start Caddy. After mail DNS and TLS are ready, check Nginx's active configuration with `sudo nginx -T` and add a dedicated `server_name webmail.example.com` virtual host that proxies to `http://127.0.0.1:8088` with the standard forwarded headers. Do not overwrite the existing default server or other application locations. Test with `sudo nginx -t` before `sudo systemctl reload nginx`. Obtain a webmail HTTPS certificate using Certbot's Nginx plugin or your existing certificate automation. For the mail hostname certificate, use a compatible challenge method without disrupting the active Nginx listener.
+
